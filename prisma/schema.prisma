@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  cart         Cart?
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  sortOrder   Int        @default(0)
+  items       MenuItem[]
+}
+
+model MenuItem {
+  id              String           @id @default(uuid())
+  categoryId      String
+  category        Category         @relation(fields: [categoryId], references: [id])
+  name            String
+  description     String?
+  imageUrl        String?
+  basePrice       Decimal          @db.Decimal(10, 2)
+  prepTimeMinutes Int              @default(15)
+  isAvailable     Boolean          @default(true)
+  stockQuantity   Int              @default(100)
+  dietaryTags     String[]         @default([])
+  options         MenuItemOption[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model MenuItemOption {
+  id            String   @id @default(uuid())
+  menuItemId    String
+  menuItem      MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  groupName     String
+  optionName    String
+  priceModifier Decimal  @db.Decimal(10, 2) @default(0)
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id                  String   @id @default(uuid())
+  cartId              String
+  cart                Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  menuItemId          String
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity            Int      @default(1)
+  selectedOptions     Json     @default("[]")
+  specialInstructions String?
+  unitPrice           Decimal  @db.Decimal(10, 2)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Order {
+  id                  String           @id @default(uuid())
+  userId              String
+  user                User             @relation(fields: [userId], references: [id])
+  orderNumber         String           @unique
+  status              OrderStatus      @default(RECEIVED)
+  subtotal            Decimal          @db.Decimal(10, 2)
+  tax                 Decimal          @db.Decimal(10, 2)
+  total               Decimal          @db.Decimal(10, 2)
+  specialInstructions String?
+  items               OrderItem[]
+  payment             Payment?
+  statusLogs          OrderStatusLog[]
+  placedAt            DateTime         @default(now())
+  preparedAt          DateTime?
+  readyAt             DateTime?
+  completedAt         DateTime?
+}
+
+model OrderItem {
+  id                  String   @id @default(uuid())
+  orderId             String
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId          String
+  menuItem            MenuItem @relation(fields: [menuItemId], references: [id])
+  itemName            String
+  quantity            Int
+  selectedOptions     Json     @default("[]")
+  specialInstructions String?
+  unitPrice           Decimal  @db.Decimal(10, 2)
+  totalPrice          Decimal  @db.Decimal(10, 2)
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  status        PaymentStatus @default(PENDING)
+  amount        Decimal       @db.Decimal(10, 2)
+  transactionId String?
+  failureReason String?
+  processedAt   DateTime?
+}
+
+model OrderStatusLog {
+  id         String       @id @default(uuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  changedAt  DateTime     @default(now())
+}
