@@ -23,7 +23,7 @@ A real-time restaurant ordering API built with NestJS, Prisma, PostgreSQL, and S
 
 1. Clone the repository:
    ```bash
-   git clone git@github.com-personal:darky99/restaurant-backend.git
+   git clone https://github.com/darky99/restaurant-backend.git
    cd restaurant-backend
    ```
 
@@ -32,23 +32,36 @@ A real-time restaurant ordering API built with NestJS, Prisma, PostgreSQL, and S
    npm install
    ```
 
-3. Create `.env` from the example:
+3. Start PostgreSQL (if not already running):
+   ```bash
+   docker run -d --name restaurant-postgres \
+     -e POSTGRES_PASSWORD=postgres123 \
+     -p 5432:5432 \
+     postgres:15-alpine
+   ```
+
+4. Create the database:
+   ```bash
+   docker exec restaurant-postgres psql -U postgres -c "CREATE DATABASE restaurant_db;"
+   ```
+
+5. Create `.env` from the example:
    ```bash
    cp .env.example .env
    ```
-   Update `DATABASE_URL` with your PostgreSQL connection string.
+   The default `DATABASE_URL` is `postgresql://postgres:postgres123@localhost:5432/restaurant_db`. Update it if your PostgreSQL setup differs.
 
-4. Create the database and run migrations:
+6. Run migrations:
    ```bash
    npx prisma migrate dev
    ```
 
-5. Seed the database:
+7. Seed the database:
    ```bash
    npx prisma db seed
    ```
 
-6. Start the development server:
+8. Start the development server:
    ```bash
    npm run start:dev
    ```
